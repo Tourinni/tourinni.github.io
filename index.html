@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kim's Birthday Countdown</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;700&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* Variables CSS para colores */
+        :root {
+            --color-dark-bg: #0A0A0A; /* Negro muy oscuro */
+            --color-text-light: #F0F0F0; /* Blanco casi puro */
+            --color-accent-white: #FFFFFF; /* Blanco para detalles */
+            --color-accent-black: #1A1A1A; /* Negro para contraste sutil */
+            --color-star-glow: #FDFCEE; /* Blanco cremoso para brillo de estrellas de fondo */
+            --color-jupiter-eye: #D2A478; /* Un tono café/naranja para el ojo de Júpiter */
+
+            /* Nuevos colores para elementos clickeables */
+            --color-clickable-purple: #9b59b6; /* Morado tenue */
+            --color-clickable-blue: #3498db; /* Celeste tenue */
+            --color-clickable-yellow: #f1c40f; /* Amarillo/dorado tenue */
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden; /* Oculta barras de desplazamiento */
+            font-family: 'Montserrat', sans-serif;
+            background-color: var(--color-dark-bg);
+            color: var(--color-text-light);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            position: relative; /* Para posicionar elementos absolutamente */
+        }
+
+        /* Contenedor principal del universo */
+        .universe-container {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            perspective: 1000px; /* Para efectos 3D */
+        }
+
+        /* Estrellas base (fondo, no clickeables) */
+        .star {
+            position: absolute;
+            background-color: var(--color-star-glow);
+            border-radius: 50%;
+            opacity: 0;
+            animation: twinkle 4s infinite ease-in-out;
+            box-shadow: 0 0 5px var(--color-star-glow); /* Brillo más sutil para las de fondo */
+            pointer-events: none; /* No son clickeables */
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0; transform: scale(0.5); }
+            50% { opacity: 0.7; transform: scale(1); } /* Más opacas para las de fondo */
+        }
+
+        /* Estrellas Clickeables (clase adicional para diferenciarlas) */
+        .star.clickable {
+            position: absolute; /* Asegura que puedan ser posicionadas */
+            animation: twinkle-clickable 4s infinite ease-in-out, subtle-float 15s infinite ease-in-out alternate; /* Nueva animación de movimiento */
+            cursor: pointer;
+            transition: transform 0.2s ease-in-out, opacity 0.3s ease-in-out; /* Transición de opacidad para el parpadeo */
+            pointer-events: auto; /* Sí son clickeables */
+            opacity: 0; /* Empieza invisible, controlada por la animación */
+            z-index: 51; /* ¡Ahora están por encima del main-content! (main-content tiene z-index: 50) */
+            border-radius: 50%; /* Asegura que sean círculos */
+            /* El color y box-shadow se añadirán dinámicamente con JS */
+        }
+        .star.clickable:hover {
+            transform: scale(1.1); /* Ligeramente más grande al pasar el ratón, para un efecto menos agresivo en estrellas grandes */
+        }
+
+        @keyframes twinkle-clickable {
+            0%, 100% { opacity: 0.4; transform: scale(0.9); } /* Siempre visibles, con una pulsación de tamaño */
+            50% { opacity: 1; transform: scale(1.1); } /* Más brillante y grande en el pico */
+        }
+
+        /* Nueva animación de flotación sutil para elementos clickeables */
+        @keyframes subtle-float {
+            0% { transform: translate(0, 0); }
+            25% { transform: translate(5px, 5px); }
+            50% { transform: translate(0, 10px); }
+            75% { transform: translate(-5px, 5px); }
+            100% { transform: translate(0, 0); }
+        }
+
+        /* Contenedor de mensajes clickeables */
+        .message-popup {
+            position: absolute;
+            background-color: rgba(0, 0, 0, 0.85);
+            border: 1px solid var(--color-accent-white);
+            padding: 20px;
+            border-radius: 10px;
+            z-index: 100;
+            max-width: 300px;
+            text-align: center;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
+            display: none; /* Oculto por defecto, se muestra con JS */
+            flex-direction: column;
+            gap: 10px;
+            animation: fadeIn 0.3s forwards, popup-glow 1.5s ease-out forwards; /* Nueva animación de destello */
+            transform-origin: center; /* Asegura que la escala se origine desde el centro */
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Animación de destello al abrir el popup */
+        @keyframes popup-glow {
+            0% { box-shadow: 0 0 5px rgba(255, 255, 255, 0.3); transform: scale(0.95); }
+            50% { box-shadow: 0 0 25px rgba(255, 255, 255, 0.6); transform: scale(1.02); }
+            100% { box-shadow: 0 0 15px rgba(255, 255, 255, 0.3); transform: scale(1); }
+        }
+
+        .message-popup h3 {
+            color: var(--color-accent-white);
+            font-size: 1.4em;
+            margin-bottom: 5px;
+            font-family: 'Orbitron', sans-serif;
+        }
+        .message-popup p {
+            font-size: 1em;
+            line-height: 1.5;
+        }
+        /* El botón de "Entendido" se ha eliminado del HTML/JS */
+
+        /* Mensaje principal de cumpleaños y cuenta regresiva */
+        .main-content {
+            position: absolute; /* Usamos absolute para centrarlo */
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%); /* Lo centra perfectamente */
+            z-index: 50; /* Por debajo de las estrellas clickeables */
+            text-align: center;
+            padding: 20px;
+            background-color: rgba(0, 0, 0, 0.6); /* Fondo semitransparente para legibilidad */
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(5px);
+            max-width: 90%; /* Responsivo */
+            box-sizing: border-box; /* Incluye padding y border en el width/height */
+        }
+
+        h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.8em;
+            color: var(--color-accent-white);
+            text-shadow: 0 0 10px var(--color-star-glow);
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            font-size: 1.5em;
+            color: var(--color-text-light);
+            margin-bottom: 20px;
+        }
+
+        #countdown {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2em;
+            color: var(--color-star-glow);
+            text-shadow: 0 0 8px var(--color-star-glow);
+            margin-top: 20px;
+        }
+        #countdown.finished {
+            color: #FFD700; /* Dorado para cuando termine */
+            font-size: 2.5em;
+        }
+
+        /* "Su Viajero en el Tiempo y Espacio" */
+        .traveler {
+            position: absolute;
+            width: 50px; /* Tamaño del viajero */
+            height: 50px;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="feather feather-space-ship"><path d="M12 2L6 12h12L12 2zM12 22v-10m-3 0h6m-3-6v6"></path></svg>');
+            background-size: cover;
+            animation: floatAndRotate 15s infinite ease-in-out;
+            z-index: 60; /* Por encima del contenido principal */
+        }
+
+        @keyframes floatAndRotate {
+            0% { top: 10%; left: 10%; transform: rotate(0deg) scale(1); }
+            25% { top: 20%; left: 80%; transform: rotate(45deg) scale(1.05); }
+            50% { top: 70%; left: 50%; transform: rotate(90deg) scale(1); }
+            75% { top: 40%; left: 5%; transform: rotate(135deg) scale(0.95); }
+            100% { top: 10%; left: 10%; transform: rotate(180deg) scale(1); }
+        }
+
+        /* Júpiter Sutil (un patrón de fondo en el main-content o un elemento propio) */
+        .jupiter-hint {
+            position: absolute;
+            width: 150px;
+            height: 150px;
+            background: radial-gradient(circle at 30% 30%, var(--color-jupiter-eye) 5%, rgba(200, 150, 100, 0.2) 20%, rgba(200, 150, 100, 0) 70%);
+            border-radius: 50%;
+            filter: blur(10px);
+            opacity: 0.1;
+            bottom: 5%;
+            right: 5%;
+            animation: pulse-jupiter 7s infinite ease-in-out alternate;
+            z-index: 40;
+        }
+
+        @keyframes pulse-jupiter {
+            0%, 100% { transform: scale(1); opacity: 0.1; }
+            50% { transform: scale(1.03); opacity: 0.15; }
+        }
+
+        /* Media Queries para responsividad (móviles) */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2em;
+            }
+            .subtitle {
+                font-size: 1.2em;
+            }
+            #countdown {
+                font-size: 1.5em;
+            }
+            .message-popup {
+                max-width: 90%;
+                padding: 15px;
+            }
+            .traveler {
+                width: 40px;
+                height: 40px;
+            }
+            .jupiter-hint {
+                width: 100px;
+                height: 100px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 1.5em;
+            }
+            .subtitle {
+                font-size: 1em;
+            }
+            #countdown {
+                font-size: 1.2em;
+            }
+            .message-popup {
+                padding: 10px;
+            }
+            .traveler {
+                width: 30px;
+                height: 30px;
+            }
+        }
+
+    </style>
+</head>
+<body>
+    <div class="universe-container">
+        <div class="jupiter-hint"></div> <div class="traveler" id="traveler-icon"></div> </div>
+
+    <div class="main-content" id="main-countdown-box">
+        <h1>Kim's Birthday Countdown!</h1>
+        <p class="subtitle">Happy Birthday, my beloved universe<3</p>
+        <p><i>The traveler will be always taking care of Jupiter</i></p>
+        <div id="countdown"></div>
+    </div>
+
+    <div id="message-popup-container"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const universeContainer = document.querySelector('.universe-container');
+            const messagePopupContainer = document.getElementById('message-popup-container');
+            const mainCountdownBox = document.getElementById('main-countdown-box');
+
+            // --- Configuración de los mensajes para elementos clickeables ---
+            const clickableElementsData = [
+                {
+                    type: 'star',
+                    title: 'A Shooting Star!',
+                    text: 'I wish all your dreams come true, my love.',
+                    position: 'random'
+                },
+                {
+                    type: 'star',
+                    title: 'Beautiful Light',
+                    text: 'Your light illuminates my universe, Kim <3, (pd: you are my universe)',
+                    position: 'random'
+                },
+                {
+                    type: 'star',
+                    title: 'A Flash of Happiness',
+                    text: 'I hope this day is full of joy for you.',
+                    position: 'random'
+                },
+                {
+                    type: 'star',
+                    title: 'Cosmic Corner',
+                    text: 'Where our hearts meet in infinity.',
+                    position: 'random'
+                },
+                {
+                    type: 'star',
+                    title: 'Cosmic Surprise!',
+                    text: '"The traveler" and the entire universe wish you a birthday as amazing as you are.',
+                    position: 'random'
+                }
+            ];
+
+            // Colores espaciales para elementos clickeables
+            const clickableColors = [
+                'var(--color-clickable-purple)',
+                'var(--color-clickable-blue)',
+                'var(--color-clickable-yellow)'
+            ];
+
+            // --- Generar estrellas ---
+            function createCelestialBody(type, data) {
+                const element = document.createElement('div');
+                element.classList.add(type);
+                element.classList.add('clickable'); // Marcar como clickeable
+
+                // Asignar un color aleatorio de la paleta
+                const randomColor = clickableColors[Math.floor(Math.random() * clickableColors.length)];
+
+                element.style.backgroundColor = randomColor;
+                element.style.boxShadow = `0 0 40px ${randomColor}, 0 0 80px ${randomColor}, 0 0 120px ${randomColor}`;
+                
+                // Estrellas clickeables 5 veces más grandes
+                element.style.width = (Math.random() * 20 + 15) + 'px'; // Estrellas clickeables entre 15 y 35px
+                element.style.height = element.style.width;
+                
+                element.style.animationDelay = (Math.random() * 5) + 's';
+
+                function setStarPositionAroundBox() {
+                    const mainBoxRect = mainCountdownBox.getBoundingClientRect();
+                    const containerWidth = universeContainer.offsetWidth;
+                    const containerHeight = universeContainer.offsetHeight;
+
+                    // Definimos un margen de cercanía desde el borde del cuadro principal
+                    const closenessMargin = 50; // Por ejemplo, 50px de distancia desde el borde del cuadro
+                    const starSize = element.offsetWidth;
+
+                    let newLeft, newTop;
+                    let positionFound = false;
+                    let attempts = 0;
+                    const maxAttempts = 100; // Aumentar intentos para asegurar la posición
+
+                    while (!positionFound && attempts < maxAttempts) {
+                        const randomZone = Math.floor(Math.random() * 4); // 0: arriba, 1: abajo, 2: izquierda, 3: derecha
+
+                        switch (randomZone) {
+                            case 0: // Arriba del cuadro
+                                newTop = mainBoxRect.top - closenessMargin - starSize - (Math.random() * 50); // Mueve un poco más arriba
+                                newLeft = Math.random() * (mainBoxRect.right - mainBoxRect.left) + mainBoxRect.left;
+                                break;
+                            case 1: // Abajo del cuadro
+                                newTop = mainBoxRect.bottom + closenessMargin + (Math.random() * 50); // Mueve un poco más abajo
+                                newLeft = Math.random() * (mainBoxRect.right - mainBoxRect.left) + mainBoxRect.left;
+                                break;
+                            case 2: // Izquierda del cuadro
+                                newLeft = mainBoxRect.left - closenessMargin - starSize - (Math.random() * 50); // Mueve un poco más a la izquierda
+                                newTop = Math.random() * (mainBoxRect.bottom - mainBoxRect.top) + mainBoxRect.top;
+                                break;
+                            case 3: // Derecha del cuadro
+                                newLeft = mainBoxRect.right + closenessMargin + (Math.random() * 50); // Mueve un poco más a la derecha
+                                newTop = Math.random() * (mainBoxRect.bottom - mainBoxRect.top) + mainBoxRect.top;
+                                break;
+                        }
+
+                        // Ajustar si la estrella se sale del universo
+                        newLeft = Math.max(0, Math.min(newLeft, containerWidth - starSize));
+                        newTop = Math.max(0, Math.min(newTop, containerHeight - starSize));
+
+                        // Confirmar que la estrella no se superponga con el cuadro principal
+                        const overlapsMainBox = (
+                            newLeft < mainBoxRect.right &&
+                            newLeft + starSize > mainBoxRect.left &&
+                            newTop < mainBoxRect.bottom &&
+                            newTop + starSize > mainBoxRect.top
+                        );
+
+                        if (!overlapsMainBox) {
+                            positionFound = true;
+                        }
+                        attempts++;
+                    }
+
+                    // Si después de muchos intentos no encontramos una buena posición, usamos el centro del universo
+                    if (!positionFound) {
+                        newLeft = Math.random() * (containerWidth - starSize);
+                        newTop = Math.random() * (containerHeight - starSize);
+                    }
+                    
+                    element.style.left = `${newLeft}px`;
+                    element.style.top = `${newTop}px`;
+                }
+
+                // Llamar a setStarPositionAroundBox después de un pequeño retraso para asegurar que mainCountdownBox esté renderizado
+                setTimeout(setStarPositionAroundBox, 100); 
+
+                // Vuelve a posicionar si la ventana cambia de tamaño
+                window.addEventListener('resize', () => {
+                    setTimeout(setStarPositionAroundBox, 50);
+                });
+
+
+                element.addEventListener('click', (event) => {
+                    event.stopPropagation();
+                    showMessagePopup(data.title, data.text, event.clientX, event.clientY);
+                });
+
+                universeContainer.appendChild(element);
+            }
+
+            clickableElementsData.forEach(item => {
+                createCelestialBody(item.type, item);
+            });
+
+            // Generar algunas estrellas de fondo adicionales no clickeables para densidad
+            for (let i = 0; i < 150; i++) {
+                const star = document.createElement('div');
+                star.classList.add('star');
+                star.style.top = Math.random() * 100 + '%';
+                star.style.left = Math.random() * 100 + '%';
+                star.style.width = (Math.random() * 2 + 1) + 'px';
+                star.style.height = star.style.width;
+                star.style.animationDelay = (Math.random() * 8) + 's';
+                star.style.opacity = Math.random() * 0.7;
+                universeContainer.appendChild(star);
+            }
+
+            // --- Funcionalidad del popup de mensajes ---
+            let currentPopup = null;
+            let outsideClickListener = null; // Para gestionar el cierre al clic fuera
+
+            function closePopup() {
+                if (currentPopup) {
+                    currentPopup.remove();
+                    currentPopup = null;
+                    // Limpiar el listener de clic fuera si existe
+                    if (outsideClickListener) {
+                        document.removeEventListener('click', outsideClickListener);
+                        outsideClickListener = null;
+                    }
+                }
+            }
+
+            function showMessagePopup(title, text, x, y) {
+                closePopup(); // Cierra cualquier popup existente antes de abrir uno nuevo
+
+                const popup = document.createElement('div');
+                popup.classList.add('message-popup');
+                // Ya no incluye el botón "Entendido"
+                popup.innerHTML = `
+                    <h3>${title}</h3>
+                    <p>${text}</p>
+                `;
+
+                // Posicionamiento responsivo para que el popup no se salga de la pantalla
+                messagePopupContainer.appendChild(popup); // Añadimos el popup para obtener sus dimensiones
+                popup.style.display = 'flex'; // Para que las dimensiones sean correctas
+
+                const popupWidth = popup.offsetWidth;
+                const popupHeight = popup.offsetHeight;
+                const viewportWidth = window.innerWidth;
+                const viewportHeight = window.innerHeight;
+
+                let popupLeft = x - (popupWidth / 2);
+                let popupTop = y - (popupHeight / 2);
+
+                // Ajustar posición para que no se salga por la derecha
+                if (popupLeft + popupWidth + 10 > viewportWidth) {
+                    popupLeft = viewportWidth - popupWidth - 10;
+                }
+                // Ajustar posición para que no se salga por la izquierda
+                if (popupLeft < 10) {
+                    popupLeft = 10;
+                }
+                // Ajustar posición para que no se salga por abajo
+                if (popupTop + popupHeight + 10 > viewportHeight) {
+                    popupTop = viewportHeight - popupHeight - 10;
+                }
+                // Ajustar posición para que no se salga por arriba
+                if (popupTop < 10) {
+                    popupTop = 10;
+                }
+                
+                popup.style.left = `${popupLeft}px`;
+                popup.style.top = `${popupTop}px`;
+
+                currentPopup = popup;
+
+                // Cierre al sacar el cursor (solo para desktop)
+                if (!('ontouchstart' in window)) { // Si no es un dispositivo táctil
+                    popup.addEventListener('mouseleave', closePopup);
+                }
+
+                // Cierre al hacer clic fuera del popup (para desktop y móvil)
+                // Usamos un pequeño retraso para evitar que el mismo clic que abre el popup lo cierre inmediatamente
+                setTimeout(() => {
+                    outsideClickListener = (event) => {
+                        // Si el clic no fue dentro del popup
+                        if (currentPopup && !currentPopup.contains(event.target)) {
+                            closePopup();
+                        }
+                    };
+                    document.addEventListener('click', outsideClickListener);
+                }, 100); // Pequeño retraso de 100ms
+            }
+
+            // --- Cuenta regresiva ---
+            function updateCountdown() {
+                // Fecha de cumpleaños (19 de Junio de 2025, 00:00:00 GMT-06)
+                const birthday = new Date('2025-06-19T00:00:00-06:00').getTime();
+                const now = new Date().getTime();
+                const distance = birthday - now;
+
+                const countdownElement = document.getElementById('countdown');
+
+                if (distance < 0) {
+                    countdownElement.innerHTML = "¡Feliz Cumpleaños, Kim! ¡Nuestro universo celebra tu existencia!";
+                    countdownElement.classList.add('finished');
+                    clearInterval(countdownInterval);
+                    return;
+                }
+
+                const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+                countdownElement.innerHTML = `
+                    ${days}d ${hours}h ${minutes}m ${seconds}s
+                `;
+            }
+
+            const countdownInterval = setInterval(updateCountdown, 1000);
+            updateCountdown();
+
+            // Animación del viajero
+            const traveler = document.getElementById('traveler-icon');
+            function animateTraveler() {
+                const containerWidth = universeContainer.offsetWidth;
+                const containerHeight = universeContainer.offsetHeight;
+
+                // Ajuste el padding para que el viajero no se pegue demasiado a los bordes
+                const padding = 20; // Menor padding para que se vea más en móvil
+                const startX = Math.random() * (containerWidth - 2 * padding) + padding;
+                const startY = Math.random() * (containerHeight - 2 * padding) + padding;
+                const endX = Math.random() * (containerWidth - 2 * padding) + padding;
+                const endY = Math.random() * (containerHeight - 2 * padding) + padding;
+
+                traveler.style.left = `${startX}px`;
+                traveler.style.top = `${startY}px`;
+
+                traveler.animate([
+                    { left: `${startX}px`, top: `${startY}px`, transform: `rotate(${Math.random() * 360}deg)` },
+                    { left: `${endX}px`, top: `${endY}px`, transform: `rotate(${Math.random() * 360 + 180}deg)` }
+                ], {
+                    duration: 20000 + Math.random() * 10000,
+                    easing: 'ease-in-out',
+                    iterations: 1,
+                    fill: 'forwards'
+                }).onfinish = () => {
+                    animateTraveler();
+                };
+            }
+            animateTraveler();
+        });
+    </script>
+</body>
+</html>
